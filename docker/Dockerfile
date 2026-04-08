@@ -22,6 +22,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash-completion \
     && rm -rf /var/lib/apt/lists/*
 
+# Install CUDA nvcc compiler needed to build flash-attn from source.
+# We use [trusted=yes] because NVIDIA's repo key uses SHA1 which
+# Debian Trixie rejects since 2026-02.
+RUN echo "deb [trusted=yes] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /" \
+       > /etc/apt/sources.list.d/cuda.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       cuda-nvcc-12-8 cuda-cudart-dev-12-8 libcusparse-dev-12-8 libcublas-dev-12-8 \
+    && rm -rf /var/lib/apt/lists/*
+
 # =============================== User Setup ================================ #
 
 ARG MYUID=1000
@@ -54,7 +64,8 @@ USER ${USER}
 
 # Change HOME environment variable
 ENV HOME=/home/${USER}
-ENV PATH=/lerobot/.venv/bin:${PATH}
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=/lerobot/.venv/bin:/usr/local/cuda/bin:${PATH}
 
 # Activate venv in bashrc for interactive shells
 RUN echo '' >> /home/${USER}/.bashrc \
@@ -65,7 +76,15 @@ RUN echo '' >> /home/${USER}/.bashrc \
 RUN mkdir -p ${PWDR}
 WORKDIR ${PWDR}
 COPY --chown=${MYUID}:${MYGID} lerobot/ lerobot/
-RUN uv pip install --no-deps -e lerobot/
+RUN uv pip install --no-deps -e lerobot/ \
+    && uv pip install ninja "packaging>=24.2,<26.0"
+
+# Install groot dependencies including flash-attn from pre-built wheel
+# (2.8.3 has no pre-built wheel for torch 2.10+cu12, use 2.8.1 which does)
+RUN FLASH_ATTN_WHL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.1/flash_attn-2.8.1+cu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" \
+    && uv pip install transformers==5.3.0 peft "dm-tree>=0.1.8" "timm>=1.0.0,<1.1.0" \
+    "safetensors>=0.4.3" "Pillow>=10.0.0,<13.0.0" decord \
+    && uv pip install "${FLASH_ATTN_WHL}"
 
 # Change entrypoint
 COPY docker/.config/entrypoint.sh /entrypoint.sh
