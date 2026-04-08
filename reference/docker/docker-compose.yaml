@@ -1,0 +1,33 @@
+services:
+  cf-lab:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cf-lab
+    entrypoint: [bash, -c, "python -m pip install -e /workspace/cf_lab/source/cf_lab && exec bash"]
+    stdin_open: true
+    tty: true
+    network_mode: host
+    environment:
+      - ACCEPT_EULA=Y
+      - PRIVACY_CONSENT=Y
+      - DISPLAY
+    working_dir: /workspace/cf_lab
+    volumes:
+      - ..:/workspace/cf_lab:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      - ${HOME}/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache:rw
+      - ${HOME}/docker/isaac-sim/cache/ov:/root/.cache/ov:rw
+      - ${HOME}/docker/isaac-sim/cache/pip:/root/.cache/pip:rw
+      - ${HOME}/docker/isaac-sim/cache/glcache:/root/.cache/nvidia/GLCache:rw
+      - ${HOME}/docker/isaac-sim/cache/computecache:/root/.nv/ComputeCache:rw
+      - ${HOME}/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs:rw
+      - ${HOME}/docker/isaac-sim/data:/root/.local/share/ov/data:rw
+      - ${HOME}/docker/isaac-sim/documents:/root/Documents:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

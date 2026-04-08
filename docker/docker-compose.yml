@@ -1,0 +1,62 @@
+x-common-volumes: &common-volumes
+  - /tmp/.X11-unix:/tmp/.X11-unix:rw
+  - /tmp/.docker.xauth:/tmp/.docker.xauth
+  - ..:/home/borg/leborg
+  - ${HOME}/.cache/huggingface:/home/borg/.cache/huggingface
+  - /dev/shm:/dev/shm
+
+x-common-environment: &common-environment
+  - DISPLAY=${DISPLAY}
+  - QT_X11_NO_MITSHM=1
+  - XAUTHORITY=/tmp/.docker.xauth
+  - MPLCONFIGDIR=/home/borg/.matplotlib
+  - NVIDIA_VISIBLE_DEVICES=all
+  - NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility
+
+services:
+  leborg:
+    image: leborg_image:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        MYUID: ${MYUID:-1000}
+        MYGID: ${MYGID:-1000}
+    container_name: leborg
+    network_mode: host
+    stdin_open: true
+    tty: true
+    environment: *common-environment
+    volumes: *common-volumes
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    devices:
+      - /dev/dri:/dev/dri
+
+  leborg-hw:
+    image: leborg_image:latest
+    container_name: leborg-hw
+    network_mode: host
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment: *common-environment
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth
+      - ..:/home/borg/leborg
+      - ${HOME}/.cache/huggingface:/home/borg/.cache/huggingface
+      - /dev/shm:/dev/shm
+      - /dev:/dev
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
