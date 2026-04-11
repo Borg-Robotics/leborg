@@ -19,6 +19,25 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pyarrow.parquet as pq
+
+
+def drop_frame_index_from_parquets(dataset_root: Path) -> None:
+    """Remove the 'frame_index' column from all parquet files (v2.0 artifact)."""
+    data_dir = dataset_root / "data"
+    if not data_dir.is_dir():
+        print(f"No data/ directory found, skipping parquet cleanup.")
+        return
+
+    parquet_files = sorted(data_dir.rglob("*.parquet"))
+    for pf in parquet_files:
+        table = pq.read_table(pf)
+        if "frame_index" in table.column_names:
+            table = table.drop("frame_index")
+            pq.write_table(table, pf)
+            print(f"Dropped 'frame_index' from {pf}")
+        else:
+            print(f"No 'frame_index' in {pf}, skipping.")
 
 
 def to_array(val):
@@ -66,6 +85,7 @@ def create_episodes_stats(meta_dir: Path) -> None:
 
     episodes_path = meta_dir / "episodes.jsonl"
     stats_path = meta_dir / "stats.json"
+    info_path = meta_dir / "info.json"
 
     if not episodes_path.exists():
         sys.exit(f"ERROR: {episodes_path} not found")
@@ -85,6 +105,28 @@ def create_episodes_stats(meta_dir: Path) -> None:
         for stat_name, stat_value in stat_data.items():
             stats_template[key][stat_name] = to_array(stat_value)
         stats_template[key]["count"] = np.array([1])
+
+    # Add placeholder stats for image/video features missing from stats.json
+    # (v2.0 stats.json typically omits these, but v2.1 episodes_stats needs them)
+    if info_path.exists():
+        with open(info_path) as f:
+            info = json.load(f)
+        features = info.get("features", {})
+        for key, feat in features.items():
+            if key not in stats_template:
+                dtype = feat.get("dtype", "")
+                if "image" in dtype or "video" in dtype or "image" in key:
+                    # Placeholder stats for image features (0-255 range, 3 channels)
+                    # Shape must be (C, 1, 1) to pass v3.0 validation
+                    channels = feat.get("shape", [3])[-1] if feat.get("shape") else 3
+                    stats_template[key] = {
+                        "mean": np.zeros((channels, 1, 1)),
+                        "std": np.ones((channels, 1, 1)),
+                        "min": np.zeros((channels, 1, 1)),
+                        "max": np.full((channels, 1, 1), 255.0),
+                        "count": np.array([1]),
+                    }
+                    print(f"Added placeholder image stats for '{key}'")
 
     serializable_template = np_to_python(stats_template)
 
@@ -116,6 +158,7 @@ def main():
 
     update_info_json(meta_dir)
     create_episodes_stats(meta_dir)
+    drop_frame_index_from_parquets(args.dataset_root)
     print("Done. Dataset is now v2.1 and ready for convert_dataset_v21_to_v30.")
 
 
