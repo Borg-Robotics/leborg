@@ -1,0 +1,6 @@
+.vscode/
+dataset/
+output/
+
+*.log
+*.pyc

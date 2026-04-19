@@ -66,6 +66,11 @@ USER ${USER}
 ENV HOME=/home/${USER}
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=/lerobot/.venv/bin:/usr/local/cuda/bin:${PATH}
+ENV HF_HOME=/home/${USER}/.cache/huggingface
+ENV HF_LEROBOT_HOME=/home/${USER}/.cache/huggingface/lerobot
+ENV TORCH_HOME=/home/${USER}/.cache/torch
+ENV TRITON_CACHE_DIR=/home/${USER}/.cache/triton
+ENV HF_DATASETS_CACHE=/tmp/hf_cache
 
 # Activate venv in bashrc for interactive shells
 RUN echo '' >> /home/${USER}/.bashrc \
@@ -83,7 +88,7 @@ RUN uv pip install --no-deps -e lerobot/ \
 # (2.8.3 has no pre-built wheel for torch 2.10+cu12, use 2.8.1 which does)
 RUN FLASH_ATTN_WHL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.1/flash_attn-2.8.1+cu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" \
     && uv pip install transformers==5.3.0 peft "dm-tree>=0.1.8" "timm>=1.0.0,<1.1.0" \
-    "safetensors>=0.4.3" "Pillow>=10.0.0,<13.0.0" decord \
+    "safetensors>=0.4.3" "Pillow>=10.0.0,<13.0.0" decord pyzmq msgpack \
     && uv pip install "${FLASH_ATTN_WHL}"
 
 # Change entrypoint
