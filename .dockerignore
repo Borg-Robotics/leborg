@@ -1,0 +1,17 @@
+# Git
+.git
+
+# Caches
+.ruff_cache
+__pycache__
+
+# IDE / tooling
+.claude
+.vscode
+
+# Logs
+logs
+
+# Not needed in image (mounted at runtime or unused)
+reference
+dataset

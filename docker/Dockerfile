@@ -18,8 +18,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
     bash-completion \
+    curl \
+    sudo \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CUDA nvcc compiler needed to build flash-attn from source.
@@ -94,6 +96,11 @@ RUN FLASH_ATTN_WHL="https://github.com/Dao-AILab/flash-attention/releases/downlo
 # Change entrypoint
 COPY docker/.config/entrypoint.sh /entrypoint.sh
 RUN sudo chmod +x /entrypoint.sh
+
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+ && unzip awscliv2.zip \
+ && sudo ./aws/install \
+ && rm -rf awscliv2.zip aws
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
