@@ -1,0 +1,30 @@
+services:
+  leborg:
+    image: davideborg/leborg:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: brev-leborg
+    runtime: nvidia
+    network_mode: host
+
+    shm_size: "16gb"
+
+    volumes:
+      - ../:/home/borg/leborg
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+              - gpu
+              - utility
+              - compute
+              - video
+
+    entrypoint: bash
+    stdin_open: true
+    tty: true

@@ -1,4 +1,4 @@
 [submodule "lerobot"]
 	path = lerobot
 	url = git@github.com:Borg-Robotics/lerobot.git
-	branch = fix-groot-05
+	branch = fix/groot-inference-loading

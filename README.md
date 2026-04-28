@@ -32,7 +32,7 @@ To convert a v2.0 dataset, first upgrade it to v2.1, then run the official conve
 From inside the container (or any environment with Python and NumPy):
 
 ```shell
-python scripts/convert_dataset_v20_to_v21.py dataset/dataset_2
+python scripts/convert_dataset_v20_to_v21.py datasets/dataset_2
 ```
 
 This updates `meta/info.json` to v2.1 and generates `meta/episodes_stats.jsonl` from
@@ -45,7 +45,7 @@ Run the official LeRobot conversion script:
 ```shell
 python -m lerobot.scripts.convert_dataset_v21_to_v30 \
     --repo-id local_dataset \
-    --root dataset/dataset_2 \
+    --root datasets/dataset_2 \
     --push-to-hub=false
 ```
 
@@ -55,6 +55,34 @@ The converted dataset will contain:
 - `meta/episodes/chunk-XXX/` (per-chunk episode metadata)
 - `data/chunk-XXX/file-XXX.parquet`
 - `videos/{video_key}/chunk-XXX/file-XXX.mp4`
+
+## Train GR00T on a Custom Dataset
+
+```shell
+lerobot-train \
+    --policy.type=groot \
+    --policy.push_to_hub=false \
+    --policy.device=cuda \
+    --policy.tune_projector=true \
+    --policy.tune_diffusion_model=true \
+    --policy.tune_llm=false \
+    --policy.tune_visual=false \
+    --policy.lora_rank=0 \
+    --dataset.repo_id=datasets/dataset_2 \
+    --dataset.root=datasets/dataset_2 \
+    --dataset.image_transforms.enable=true \
+    --steps=10000 \
+    --batch_size=8 \
+    --num_workers=8 \
+    --save_freq=2000 \
+    --log_freq=100 \
+    --seed=42 \
+    --output_dir=outputs/train/groot_borg \
+    --job_name=groot_borg \
+    --wandb.enable=true \
+    --wandb.project=borg_groot \
+    --wandb.disable_artifact=true
+```
 
 ## Running Inference with a Trained Policy
 
