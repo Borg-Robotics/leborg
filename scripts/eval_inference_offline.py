@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""Offline sanity check: run the Groot checkpoint on a recorded dataset episode
+"""Offline sanity check: run a policy checkpoint on a recorded dataset episode
 and compare predicted actions against the ground-truth actions.
+
+Policy-agnostic — the policy type is read from the checkpoint's ``config.json``
+via ``PreTrainedConfig.from_pretrained``, then loaded through the lerobot
+factory (``get_policy_class``). Works with any registered policy
+(GR00T, π0, π0.5, ACT, …).
 
 Mirrors the policy loading and processor wiring from
 ``lerobot/src/lerobot/async_inference/policy_server.py`` so the preprocessing is
@@ -9,14 +14,14 @@ but the bridged run doesn't move the robot, the bug is in the bridge / action
 publishing, not in inference itself.
 
 The prediction horizon is whatever the checkpoint's preprocessor was configured
-with (16 steps for the Groot N1.5 checkpoint trained here — 0.8 s at 20 Hz).
-We run inference every ``--stride`` frames and overlay the full predicted
-trajectory for each call on top of the ground-truth trajectory, per joint.
+with (16 steps for GR00T N1.5; 50 for π0.5). We run inference every ``--stride``
+frames and overlay the full predicted trajectory for each call on top of the
+ground-truth trajectory, per joint.
 
 Example:
 
 python3 scripts/eval_inference_offline.py \
-    --checkpoint outputs/train/groot/checkpoints/last/pretrained_model \
+    --checkpoint outputs/train/pi05/checkpoints/last/pretrained_model \
     --dataset-root datasets/dataset_1 \
     --episode 0 \
     --stride 8
@@ -47,9 +52,10 @@ import torch
 # the checkpoint's train_config.json references.
 from robots import borg  # noqa: F401
 
+from lerobot.configs.policies import PreTrainedConfig
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.policies.factory import make_pre_post_processors
-from lerobot.policies.groot.modeling_groot import GrootPolicy
+from lerobot.policies.factory import get_policy_class, make_pre_post_processors
+from lerobot.policies.pretrained import PreTrainedPolicy
 
 
 ACTION_DIM = 14
@@ -77,6 +83,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--output-dir", type=Path, default=repo_root / "outputs/inference_eval")
     p.add_argument("--no-show", action="store_true", help="Skip plt.show() even if a display is available.")
+    p.add_argument(
+        "--policy-type",
+        default=None,
+        help=(
+            "Optional sanity check — if given, must match the policy type recorded in "
+            "the checkpoint's config.json (e.g. 'groot', 'pi05'). When omitted, the "
+            "type is auto-detected from the checkpoint."
+        ),
+    )
     return p.parse_args()
 
 
@@ -105,7 +120,7 @@ def build_observation(frame: dict) -> dict:
 @torch.no_grad()
 def run_inference(
     dataset: LeRobotDataset,
-    policy: GrootPolicy,
+    policy: PreTrainedPolicy,
     preprocessor,
     postprocessor,
     stride: int,
@@ -195,8 +210,16 @@ def main() -> None:
     gt_actions = collect_ground_truth(dataset)
     assert gt_actions.shape[1] == ACTION_DIM, f"unexpected action dim {gt_actions.shape[1]}"
 
-    print(f"Loading Groot checkpoint from {args.checkpoint}")
-    policy = GrootPolicy.from_pretrained(str(args.checkpoint))
+    policy_cfg = PreTrainedConfig.from_pretrained(args.checkpoint)
+    policy_type = policy_cfg.type
+    if args.policy_type is not None and args.policy_type != policy_type:
+        raise ValueError(
+            f"--policy-type={args.policy_type!r} does not match the type recorded "
+            f"in the checkpoint ({policy_type!r}). Drop the flag to auto-detect."
+        )
+    print(f"Loading {policy_type} checkpoint from {args.checkpoint}")
+    PolicyCls = get_policy_class(policy_type)
+    policy = PolicyCls.from_pretrained(str(args.checkpoint))
     policy.to(args.device)
     policy.eval()
 
@@ -215,14 +238,17 @@ def main() -> None:
 
     horizon = chunks[0][1].shape[0] if chunks else 0
     title = (
-        f"Groot offline eval — episode {args.episode}, stride {args.stride}, "
+        f"{policy_type} offline eval — episode {args.episode}, stride {args.stride}, "
         f"horizon {horizon}, {num_frames} frames @ 20 Hz\n"
         f"ckpt: {args.checkpoint}"
     )
-    pdf_path = args.output_dir / f"episode_{args.episode:04d}_stride_{args.stride}.pdf"
+    pdf_path = (
+        args.output_dir / f"{policy_type}_episode_{args.episode:04d}_stride_{args.stride}.pdf"
+    )
     plot(gt_actions, chunks, pdf_path, title)
 
     sidecar = {
+        "policy_type": policy_type,
         "checkpoint": str(args.checkpoint),
         "dataset_root": str(args.dataset_root),
         "episode": args.episode,

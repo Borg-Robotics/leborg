@@ -84,6 +84,31 @@ lerobot-train \
     --wandb.disable_artifact=true
 ```
 
+```shell
+lerobot-train \
+      --policy.type=pi05 \
+      --policy.pretrained_path=lerobot/pi05_base \
+      --policy.push_to_hub=false \
+      --policy.device=cuda \
+      --policy.dtype=bfloat16 \
+      --policy.freeze_vision_encoder=false \
+      --policy.train_expert_only=false \
+      --dataset.repo_id=datasets/dataset_2 \
+      --dataset.root=datasets/dataset_2 \
+      --dataset.image_transforms.enable=true \
+      --steps=10000 \
+      --batch_size=8 \
+      --num_workers=8 \
+      --save_freq=2000 \
+      --log_freq=100 \
+      --seed=42 \
+      --output_dir=outputs/train/pi05_borg \
+      --job_name=pi05_borg \
+      --wandb.enable=true \
+      --wandb.project=borg_pi05 \
+      --wandb.disable_artifact=true
+```
+
 ## Running Inference with a Trained Policy
 
 LeBorg runs inference as three cooperating processes:

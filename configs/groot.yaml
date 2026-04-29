@@ -1,0 +1,28 @@
+# Inference preset for GR00T N1.5 on the Borg W1.
+#
+# Usage (inside the leborg container):
+#   python scripts/run_inference.py --config_path=configs/groot.yaml
+#
+# Override any field on the CLI, e.g.:
+#   python scripts/run_inference.py --config_path=configs/groot.yaml \
+#       --pretrained_name_or_path=/path/to/another/ckpt --task="..."
+#
+# Schema is RobotClientConfig (lerobot/src/lerobot/async_inference/configs.py).
+
+robot:
+  type: borg
+  bridge_host: localhost
+
+task: "pick up the green box from the table and place it into the cardboard box"
+
+server_address: localhost:8080
+
+policy_type: groot
+pretrained_name_or_path: outputs/train/groot/checkpoints/last/pretrained_model
+
+policy_device: cuda
+client_device: cpu
+
+# GR00T N1.5 was trained with a 16-step horizon @ 20 Hz (0.8 s).
+actions_per_chunk: 16
+fps: 20

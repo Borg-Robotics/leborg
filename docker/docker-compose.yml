@@ -3,6 +3,7 @@ x-common-volumes: &common-volumes
   - /tmp/.docker.xauth:/tmp/.docker.xauth
   - ..:/home/borg/leborg
   - ${HOME}/.cache/huggingface:/home/borg/.cache/huggingface
+  - ${HOME}/.cache/torch:/home/borg/.cache/torch
   - /dev/shm:/dev/shm
 
 x-common-environment: &common-environment
@@ -15,7 +16,7 @@ x-common-environment: &common-environment
 
 services:
   leborg:
-    image: leborg_image:latest
+    image: davideborg/leborg:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -26,6 +27,9 @@ services:
     network_mode: host
     stdin_open: true
     tty: true
+    env_file:
+      - path: .env
+        required: false
     environment: *common-environment
     volumes: *common-volumes
     deploy:
@@ -39,18 +43,22 @@ services:
       - /dev/dri:/dev/dri
 
   leborg-hw:
-    image: leborg_image:latest
+    image: davideborg/leborg:latest
     container_name: leborg-hw
     network_mode: host
     stdin_open: true
     tty: true
     privileged: true
+    env_file:
+      - path: .env
+        required: false
     environment: *common-environment
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /tmp/.docker.xauth:/tmp/.docker.xauth
       - ..:/home/borg/leborg
       - ${HOME}/.cache/huggingface:/home/borg/.cache/huggingface
+      - ${HOME}/.cache/torch:/home/borg/.cache/torch
       - /dev/shm:/dev/shm
       - /dev:/dev
     deploy:

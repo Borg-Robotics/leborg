@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=lerobot-user
+ARG BASE_IMAGE=davideborg/lerobot-user:latest
 
 FROM ${BASE_IMAGE}
 
@@ -79,8 +79,12 @@ RUN echo '' >> /home/${USER}/.bashrc \
     && echo '# Activate lerobot virtual environment' >> /home/${USER}/.bashrc \
     && echo 'source /lerobot/.venv/bin/activate' >> /home/${USER}/.bashrc
 
-# Set up workspace and copy lerobot source for editable install
-RUN mkdir -p ${PWDR}
+# Set up workspace and copy lerobot source for editable install.
+RUN mkdir -p ${PWDR} \
+    ${HF_HOME} \
+    ${HF_LEROBOT_HOME} \
+    ${TORCH_HOME} \
+    ${TRITON_CACHE_DIR}
 WORKDIR ${PWDR}
 COPY --chown=${MYUID}:${MYGID} lerobot/ lerobot/
 RUN uv pip install --no-deps -e lerobot/ \

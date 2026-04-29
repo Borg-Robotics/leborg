@@ -1,0 +1,40 @@
+# Inference preset for π0.5 (PI05Policy) on the Borg W1.
+#
+# Usage (inside the leborg container):
+#   python scripts/run_inference.py --config_path=configs/pi05.yaml
+#
+# Override any field on the CLI, e.g.:
+#   python scripts/run_inference.py --config_path=configs/pi05.yaml \
+#       --pretrained_name_or_path=/path/to/another/ckpt --task="..."
+#
+# Schema is RobotClientConfig (lerobot/src/lerobot/async_inference/configs.py).
+# π0.5 policy registration: lerobot/src/lerobot/policies/pi05/.
+
+robot:
+  type: borg
+  bridge_host: localhost
+
+task: "pick up the green box from the table and place it into the cardboard box"
+
+server_address: localhost:8080
+
+policy_type: pi05
+# TODO: point this at the local π0.5 checkpoint directory
+# (the dir containing config.json + model weights, saved by Policy.save_pretrained).
+pretrained_name_or_path: outputs/train/pi05/checkpoints/last/pretrained_model
+
+policy_device: cuda
+client_device: cpu
+
+# π0.5 default chunk_size = 50 (PI05Config in configuration_pi05.py).
+# At fps=20 that's a 2.5 s horizon.
+actions_per_chunk: 50
+fps: 20
+
+# Real-Time Chunking (RTC) — server-side flow-matching guidance for π0.5.
+# Tune offline against a recorded Borg episode with examples/rtc/eval_dataset.py
+# before changing values on hardware.
+rtc_enabled: true
+rtc_execution_horizon: 10
+rtc_max_guidance_weight: 10.0
+rtc_prefix_attention_schedule: EXP
