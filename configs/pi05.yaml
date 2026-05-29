@@ -21,7 +21,7 @@ server_address: localhost:8080
 policy_type: pi05
 # TODO: point this at the local π0.5 checkpoint directory
 # (the dir containing config.json + model weights, saved by Policy.save_pretrained).
-pretrained_name_or_path: outputs/train/pi05/checkpoints/last/pretrained_model
+pretrained_name_or_path: outputs/train/pi05_borg/checkpoints/last/pretrained_model
 
 policy_device: cuda
 client_device: cpu

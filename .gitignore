@@ -1,6 +1,6 @@
 .vscode/
 dataset/
-output/
+outputs/
 
 *.log
 *.pyc

@@ -136,6 +136,10 @@ python -m lerobot.async_inference.policy_server \
     --port=8080
 ```
 
+To fit π0.5 on a 12 GiB GPU (e.g. RTX 4070), add
+`--pi05_quantization=int8 --pi05_vision_fp16=true`. Both flags are
+inference-only and have no effect on other policies.
+
 ### Step 2: Start the ROS 2 bridge (robot host, ROS 2 env)
 
 `borg_bridge.py` depends only on `rclpy`, `sensor_msgs`, `std_msgs`,
@@ -152,18 +156,20 @@ Common flags (see `--help` for the full list): `--obs-port` (default 5555),
 
 ### Step 3: Start the Robot Client (robot host, LeRobot container)
 
+Prefer the per-policy YAML presets in `configs/`. Each preset is a full
+`RobotClientConfig` (see `lerobot/src/lerobot/async_inference/configs.py`)
+and is loaded by draccus:
+
 ```shell
-python scripts/run_inference.py \
-    --robot.type=borg \
-    --robot.bridge_host=localhost \
-    --task="pick up the cup" \
-    --server_address=<gpu_machine_ip>:8080 \
-    --policy_type=groot \
-    --pretrained_name_or_path=/path/to/checkpoint \
-    --policy_device=cuda \
-    --actions_per_chunk=50 \
-    --fps=20
+python scripts/run_inference.py --config_path=configs/pi05.yaml    # π0.5 + RTC
+python scripts/run_inference.py --config_path=configs/groot.yaml   # GR00T N1.5
 ```
+
+Append any `RobotClientConfig` field to override, e.g.
+`--task="fold the towel"` or `--server_address=<gpu_machine_ip>:8080`.
+
+`configs/pi05.yaml` enables Real-Time Chunking by default; see
+`CLAUDE.md` for details.
 
 The client pulls observations (joint states + 3 camera frames) from the
 bridge and pushes action targets back; the bridge publishes those targets

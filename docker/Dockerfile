@@ -95,6 +95,7 @@ RUN uv pip install --no-deps -e lerobot/ \
 RUN FLASH_ATTN_WHL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.1/flash_attn-2.8.1+cu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" \
     && uv pip install transformers==5.3.0 peft "dm-tree>=0.1.8" "timm>=1.0.0,<1.1.0" \
     "safetensors>=0.4.3" "Pillow>=10.0.0,<13.0.0" decord pyzmq msgpack \
+    "bitsandbytes>=0.45.0" \
     && uv pip install "${FLASH_ATTN_WHL}"
 
 # Change entrypoint

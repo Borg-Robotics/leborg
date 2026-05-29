@@ -26,3 +26,8 @@ client_device: cpu
 # GR00T N1.5 was trained with a 16-step horizon @ 20 Hz (0.8 s).
 actions_per_chunk: 16
 fps: 20
+
+# RTC is unsupported by GR00T (no `init_rtc_processor`); the server detects
+# this at handshake and falls through to the non-RTC path. Stated explicitly
+# here so this file is symmetrical with configs/pi05.yaml.
+rtc_enabled: false
