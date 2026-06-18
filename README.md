@@ -136,9 +136,21 @@ python -m lerobot.async_inference.policy_server \
     --port=8080
 ```
 
-To fit π0.5 on a 12 GiB GPU (e.g. RTX 4070), add
-`--pi05_quantization=int8 --pi05_vision_fp16=true`. Both flags are
-inference-only and have no effect on other policies.
+To run π0.5 on a 12 GiB GPU (e.g. RTX 4070), add the inference-only memory
+flags — without them the model loads but OOMs on the first forward:
+
+```shell
+python -m lerobot.async_inference.policy_server \
+    --host=0.0.0.0 \
+    --port=8080 \
+    --pi05_quantization=int8 \
+    --pi05_vision_fp16=true
+```
+
+`--pi05_quantization=int8` wraps the gemma_2b language backbone with
+`bitsandbytes.Linear8bitLt` (saves ~2 GiB). `--pi05_vision_fp16=true` casts
+the SigLIP vision tower + multi-modal projector to float16 (saves ~0.8 GiB).
+Both are inference-only and have no effect on other policies.
 
 ### Step 2: Start the ROS 2 bridge (robot host, ROS 2 env)
 
@@ -165,11 +177,18 @@ python scripts/run_inference.py --config_path=configs/pi05.yaml    # π0.5 + RTC
 python scripts/run_inference.py --config_path=configs/groot.yaml   # GR00T N1.5
 ```
 
-Append any `RobotClientConfig` field to override, e.g.
-`--task="fold the towel"` or `--server_address=<gpu_machine_ip>:8080`.
+Override any field on the CLI, e.g.:
 
-`configs/pi05.yaml` enables Real-Time Chunking by default; see
-`CLAUDE.md` for details.
+```shell
+python scripts/run_inference.py --config_path=configs/pi05.yaml \
+    --task="fold the towel" \
+    --server_address=<gpu_machine_ip>:8080
+```
+
+`configs/pi05.yaml` enables Real-Time Chunking (RTC) by default
+(`rtc_enabled: true`, `rtc_execution_horizon: 10`, `rtc_prefix_attention_schedule: EXP`).
+RTC is only meaningful for π0 / π0.5 / SmolVLA; the server detects
+unsupported policies at handshake time and falls back to the non-RTC path.
 
 The client pulls observations (joint states + 3 camera frames) from the
 bridge and pushes action targets back; the bridge publishes those targets
